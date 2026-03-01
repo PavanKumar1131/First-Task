@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Productivity Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jspdf for pdf export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <!-- navigation bar -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="{{ url_for('tasks_bp.dashboard') }}" class="logo">📊 Productivity Tracker</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('tasks_bp.dashboard') }}" class="active">Dashboard</a></li>
+                <li><a href="{{ url_for('tasks_bp.tasks_list') }}">Tasks</a></li>
+                <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <!-- page header -->
+        <div class="page-header">
+            <h1>Hello, {{ current_user.username }}! 👋</h1>
+            <p>Here's your productivity overview</p>
+        </div>
+        
+        <!-- flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-messages {{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <!-- stats cards -->
+        <div class="dashboard-grid">
+            <div class="stat-card">
+                <div class="icon">📋</div>
+                <h3 id="stat-total">{{ total_tasks }}</h3>
+                <p>Total Tasks</p>
+            </div>
+            
+            <div class="stat-card">
+                <div class="icon">✅</div>
+                <h3 id="stat-completed">{{ completed }}</h3>
+                <p>Completed</p>
+            </div>
+            
+            <div class="stat-card">
+                <div class="icon">⏳</div>
+                <h3 id="stat-pending">{{ pending }}</h3>
+                <p>Pending</p>
+            </div>
+            
+            <div class="stat-card">
+                <div class="icon">⏱️</div>
+                <h3 id="stat-time">{{ total_time }}</h3>
+                <p>Time Tracked</p>
+            </div>
+        </div>
+        
+        <!-- charts section -->
+        <div class="charts-section">
+            <div class="chart-container">
+                <h3>Weekly Progress</h3>
+                <canvas id="weeklyChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3>Time by Category</h3>
+                <canvas id="categoryChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3>Task Status</h3>
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- export buttons -->
+        <div class="export-btns mt-20">
+            <a href="{{ url_for('tasks_bp.export_csv') }}" class="btn btn-primary">
+                📥 Export CSV
+            </a>
+            <button onclick="exportToPDF()" class="btn btn-success">
+                📄 Export PDF Report
+            </button>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+</body>
+</html>

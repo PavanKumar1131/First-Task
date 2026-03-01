@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasks - Productivity Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="{{ url_for('tasks_bp.dashboard') }}" class="logo">📊 Productivity Tracker</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('tasks_bp.dashboard') }}">Dashboard</a></li>
+                <li><a href="{{ url_for('tasks_bp.tasks_list') }}" class="active">Tasks</a></li>
+                <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <!-- header with add button -->
+        <div class="tasks-header">
+            <div class="page-header">
+                <h1>My Tasks</h1>
+                <p>Manage and track your tasks</p>
+            </div>
+            <button id="addTaskBtn" class="btn btn-primary">+ Add Task</button>
+        </div>
+        
+        <!-- flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-messages {{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <!-- task list -->
+        <div class="task-list">
+            {% if tasks %}
+                {% for task in tasks %}
+                <div class="task-item {% if task.status == 'Completed' %}completed{% endif %}"
+                     data-task-id="{{ task.id }}"
+                     data-task-title="{{ task.title | e }}"
+                     data-task-description="{{ task.description | e if task.description else '' }}"
+                     data-task-category="{{ task.category }}"
+                     data-task-time="{{ task.time_spent }}">
+                    <div class="task-info">
+                        <h4>{{ task.title }}</h4>
+                        {% if task.description %}
+                            <p>{{ task.description }}</p>
+                        {% endif %}
+                        <div class="task-meta">
+                            <span class="category">{{ task.category }}</span>
+                            <span class="{% if task.status == 'Completed' %}status-completed{% else %}status-pending{% endif %}">
+                                {{ task.status }}
+                            </span>
+                            <span>Created: {{ task.created_at.strftime('%b %d, %Y') }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="task-actions">
+                        <!-- timer display -->
+                        <span class="timer-display" id="timer-{{ task.id }}">
+                            {{ task.get_formatted_time() }}
+                        </span>
+                        
+                        <!-- timer button -->
+                        <button id="timer-btn-{{ task.id }}" 
+                                class="timer-btn start js-timer-btn"
+                                data-task-id="{{ task.id }}">
+                            Start
+                        </button>
+                        
+                        <!-- complete toggle -->
+                        <button class="btn btn-sm js-complete-btn {% if task.status == 'Completed' %}btn-warning{% else %}btn-success{% endif %}"
+                                data-task-id="{{ task.id }}">
+                            {% if task.status == 'Completed' %}Undo{% else %}Done{% endif %}
+                        </button>
+                        
+                        <!-- edit button -->
+                        <button class="btn btn-sm btn-primary js-edit-btn"
+                                data-task-id="{{ task.id }}">
+                            Edit
+                        </button>
+                        
+                        <!-- delete form -->
+                        <form action="{{ url_for('tasks_bp.delete_task', task_id=task.id) }}" 
+                              method="POST" 
+                              style="display: inline;"
+                              class="js-delete-form">
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="icon">📝</div>
+                    <h3>No tasks yet</h3>
+                    <p>Click "Add Task" to create your first task!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Add Task Modal -->
+    <div id="addTaskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Task</h2>
+                <button class="close-btn" id="closeAddModal">&times;</button>
+            </div>
+            <form method="POST" action="{{ url_for('tasks_bp.add_task') }}">
+                <div class="form-group">
+                    <label for="title">Task Title *</label>
+                    <input type="text" id="title" name="title" required 
+                           placeholder="What do you need to do?">
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">Description (optional)</label>
+                    <textarea id="description" name="description" rows="3"
+                              placeholder="Add more details..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <select id="category" name="category">
+                        {% for cat in categories %}
+                            <option value="{{ cat }}">{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-block">Add Task</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Edit Task Modal -->
+    <div id="editTaskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Task</h2>
+                <button class="close-btn" id="closeEditModal">&times;</button>
+            </div>
+            <form id="editTaskForm" method="POST">
+                <input type="hidden" id="editTaskId" name="task_id">
+                
+                <div class="form-group">
+                    <label for="editTitle">Task Title *</label>
+                    <input type="text" id="editTitle" name="title" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editDescription">Description</label>
+                    <textarea id="editDescription" name="description" rows="3"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editCategory">Category</label>
+                    <select id="editCategory" name="category">
+                        {% for cat in categories %}
+                            <option value="{{ cat }}">{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-block">Save Changes</button>
+            </form>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/timer.js') }}"></script>
+</body>
+</html>

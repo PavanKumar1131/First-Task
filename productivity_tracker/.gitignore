@@ -1,0 +1,10 @@
+# ignore these files
+venv/
+__pycache__/
+*.pyc
+.env
+*.db
+instance/
+.DS_Store
+exports/*.csv
+exports/*.pdf
